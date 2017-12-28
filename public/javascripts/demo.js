@@ -27,6 +27,8 @@
 
         zoom = 1.0,
         playflag = 0,
+        bpm = 120,
+        rhythm = 0,
     // HTML Elements in the page
         err,
         error_tr,
@@ -121,23 +123,26 @@
         nextCursorBtn.addEventListener("click", function() {
            
             OSMD.cursor.next();
-            //console.log(OSMD)
+            console.log(OSMD)
             //console.log(OSMD.cursor);
             //console.log(OSMD.cursor.iterator.currentVoiceEntries);
             
             var tempNotes = OSMD.cursor.getCurrentNotes();
-            //console.log(tempNotes);
+            console.log(tempNotes);
             var Notes = []
+            var duration =10;
             for(var i=0;i<tempNotes.length;i++){
                 var note ={t:null,n:null,o:null};
-                note.t = tempNotes[i].Length.realValue;
-                [note.n,note.o] = calMusicNote(tempNotes[i].pitch);
+                //note.t = tempNotes[i].Length.realValue;
+                note = calMusicNote(tempNotes[i]);
                 //note.o = tempNotes[i].pitch.Accidental;
                  if(note.n==0)continue;
                 piano.playNote(note.n,note.o);
                 Notes.push(note);
+                duration = duration>note.t?note.t:duration;
             }
             console.log(Notes);
+            console.log(duration);
             //console.log(OSMD.cursor.iterator.currentVoiceEntries[0].notes[0].pitch);
         });
         playCursorBtn.addEventListener("click", function() {
@@ -146,15 +151,22 @@
             //console.log(OSMD)
             //console.log(OSMD.cursor);
             //console.log(OSMD.cursor.iterator.currentVoiceEntries);
-            
+            if(playflag==0){
             playflag =1;
             play();
+            }
             //console.log(OSMD.cursor.iterator.currentVoiceEntries[0].notes[0].pitch);
         });
         pauseCursorBtn.addEventListener("click", function() {
            
             //OSMD.cursor.next();
-            //console.log(OSMD)
+            console.log(OSMD);
+            
+
+            console.log(rhythm.denominator);
+            console.log(rhythm.numerator);
+            console.log(bpm);
+            //console.log(OSMD.sheet.SheetPlaybackSetting.rhythm);
             //console.log(OSMD.cursor);
             //console.log(OSMD.cursor.iterator.currentVoiceEntries);
             
@@ -185,6 +197,7 @@
     }
 
     function play(){
+        console.log("play");
         if(playflag==0)return;
          var tempNotes = OSMD.cursor.getCurrentNotes();
             //console.log(tempNotes);
@@ -192,54 +205,61 @@
             var Notes = []
             var duration =10;
             for(var i=0;i<tempNotes.length;i++){
-                var note ={t:null,n:null,o:null};
-                note.t = tempNotes[i].Length.realValue;
-                duration = duration>note.t?note.t:duration;
-                [note.n,note.o] = calMusicNote(tempNotes[i].pitch);
+                var note ;
+                note = calMusicNote(tempNotes[i]);
+                //note.t = tempNotes[i].Length.realValue;
+                
+                //[note.n,note.o] = calMusicNote(tempNotes[i].pitch);
                 //note.o = tempNotes[i].pitch.Accidental;
                 //Notes.push(note);
-                if(note.n==0)continue;
+                //console.log(note);
+                if(note.n!=0){               
                 piano.playNote(note.n,note.o);
-            }
+                }
+                duration = duration>note.t?note.t:duration;
+            }       
             
-            
-            //console.log(Notes);
-            //console.log(duration);
-            var timer = setTimeout(play,duration*2000);
+            console.log(Notes);
+            console.log(duration);
+            var timer = setTimeout(play,duration*rhythm.denominator*60000/bpm);
     }
-    function calMusicNote(pitch){
-        if(typeof(pitch)=="undefined") return [0,0];
-        var retString = "";
-        var retStr = "";
+    function calMusicNote(note){
+        //console.log(note);
+        var tempnote ={t:0,n:0,o:0};
+        tempnote.t = note.Length.realValue;
+        var pitch = note.pitch;
+        if(typeof(pitch)=="undefined") return tempnote;  
+        //var retString = "";
+        //var retStr = "";
         switch(pitch.fundamentalNote){
             case 0:
-            retString ="C";
+            tempnote.n ="C";
             break;
             case 2:
-            retString ="D";
+            tempnote.n ="D";
             break;
             case 4:
-            retString ="E";
+            tempnote.n ="E";
             break;
             case 5:
-            retString ="F";
+            tempnote.n ="F";
             break;
             case 7:
-            retString ="G";
+            tempnote.n ="G";
             break;
             case 9:
-            retString ="A";
+            tempnote.n ="A";
             break;
             case 11:
-            retString ="B";
+            tempnote.n ="B";
             break;
             default:
             return [0,0];
         }
-        retString += (3+pitch.Octave);
+        tempnote.n += (3+pitch.Octave);
         //console.log(retString);
-        retStr = pitch.Accidental;
-        return [retString,retStr];
+        tempnote.o = pitch.Accidental;
+        return tempnote;
     }
     function Resize(startCallback, endCallback) {
 
@@ -296,9 +316,15 @@
 
     function onLoadingEnd(isCustom) {
         // Remove option from select
+        console.log("test");
+        console.log(OSMD);
+        rhythm = OSMD.sheet.SheetPlaybackSetting.rhythm;
+        bpm = OSMD.sheet.userStartTempoInBPM;
+        
         if (!isCustom && custom.parentElement === select) {
             select.removeChild(custom);
         }
+        
         // Enable controls again
         enable();
     }
